@@ -14,6 +14,11 @@ Use the maxattempts and sleepseconds options to control how many times the plugi
 
 NOTE: Once the number of attempts is exhausted, an exception will be raised. This will cause the rest of your pipeline to stop! If you're using this plugin to ensure only one instance of dbt runs at the end of an otherwise-successful pipeline that is the behavior you want, however.
 
+## Locking Mechanism
+
+PipelineSerializer acquires a "lock" by first attempting to open the file specified in the serializer_file_name option in exclusive mode. If it succeeds, it writes the process ID (PID) of the _parent_ process to the file.
+If it fails to open the lock file in exclusive mode, it attempts to open the lock file in read mode and, if successful, reads the lines of the file. The first line of the file is assumed to contain the parent PID of the process that created the lock file. If that parent process is no longer running, the lock is ignored and the lock is "acquired" as if the lock file did not exist.
+
 # Configuration
 ```yaml
 plugins:
