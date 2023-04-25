@@ -18,6 +18,16 @@ from meltano.edk.process import Invoker, log_subprocess_error
 log = structlog.get_logger()
 
 
+def pid_is_running(pid):
+    """ Check For the existence of a unix pid. """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
+
 class PipelineSerializer(ExtensionBase):
     """Extension implementing the ExtensionBase interface."""
 
@@ -78,8 +88,7 @@ class PipelineSerializer(ExtensionBase):
             try:
                 with open(lock_fullpath, "x") as lckfl:
                     log.info("Created lock file")
-                    lckfl.write(str(os.getppid()) + "\n")
-                    lckfl.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
+                    self.write_lock_file(lckfl)
                     file_preexists = False
             except FileExistsError:
                 # If the file exists, open it and try to read a PID from it
@@ -90,13 +99,14 @@ class PipelineSerializer(ExtensionBase):
                         parent_pid = int(lcklines[0])
                         log.debug("Parent pid is " + lcklines[0])
 
-                        if not self.pid_is_running(parent_pid):
+                        if not pid_is_running(parent_pid):
                             # Intentionally ignoring exceptions here... if we can't
                             # open this file for writing we're out of options
                             with open(lock_fullpath, "w") as lckflo:
                                 log.info("Overwrote lock file - parent pid " + str(parent_pid) + " is not running")
-                                lckflo.write(str(os.getppid()))
+                                self.write_lock_file(lckflo)
                                 file_preexists = False
+                                break
 
                     except ValueError:
                         # Log the error and re-raise
@@ -122,14 +132,9 @@ class PipelineSerializer(ExtensionBase):
 
         log.info("Removed lock file " + lock_fullpath)
 
-    def pid_is_running(self, pid):
-        """ Check For the existence of a unix pid. """
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        else:
-            return True
+    def write_lock_file(self, lockfl):
+        lockfl.write(str(os.getppid()) + "\n")
+        lockfl.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
 
 
 
