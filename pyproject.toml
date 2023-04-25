@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pipelineserializer-ext"
-version = "0.0.2"
+version = "0.0.3"
 description = "`pipelineserializer-ext` is a Meltano utility extension."
 authors = ["Tom Briggs"]
 license = "Apache 2.0"
